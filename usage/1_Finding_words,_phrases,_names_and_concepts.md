@@ -16,6 +16,12 @@ jupyter:
 # Chapter 1: Finding words, phrases, names, and concepts
 
 
+The basics of text processing with spaCy.
+Use data structures,
+statistical models,
+and linguistic features.
+
+
 ## Introduction to spaCy
 
 
