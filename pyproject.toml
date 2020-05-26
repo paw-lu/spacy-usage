@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "spacy-usage"
+version = "0.1.0"
+description = ""
+authors = ["Paulo S. Costa <pauloscosta5@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+spacy = {extras = ["lookups"], version = "^2.2.4"}
+
+[tool.poetry.dev-dependencies]
+ipykernel = "^5.3.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
