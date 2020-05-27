@@ -735,7 +735,6 @@ people = ["David Bowie", "Angela Merkel", "Lady Gaga"]
 patterns = list(nlp.pipe(people))
 ```
 
-<!-- #region -->
 ## Processing data with context
 
 Use custom attributes
@@ -746,8 +745,32 @@ import json
 from spacy.lang.en import English
 from spacy.tokens import Doc
 
-with open("exercises/en/bookquotes.json") as f:
-    DATA = json.loads(f.read())
+DATA = [
+    [
+        "One morning, when Gregor Samsa woke from troubled dreams, he found himself transformed in his bed into a horrible vermin.",
+        {"author": "Franz Kafka", "book": "Metamorphosis"},
+    ],
+    [
+        "I know not all that may be coming, but be it what it will, I'll go to it laughing.",
+        {"author": "Herman Melville", "book": "Moby-Dick or, The Whale"},
+    ],
+    [
+        "It was the best of times, it was the worst of times.",
+        {"author": "Charles Dickens", "book": "A Tale of Two Cities"},
+    ],
+    [
+        "The only people for me are the mad ones, the ones who are mad to live, mad to talk, mad to be saved, desirous of everything at the same time, the ones who never yawn or say a commonplace thing, but burn, burn, burn like fabulous yellow roman candles exploding like spiders across the stars.",
+        {"author": "Jack Kerouac", "book": "On the Road"},
+    ],
+    [
+        "It was a bright cold day in April, and the clocks were striking thirteen.",
+        {"author": "George Orwell", "book": "1984"},
+    ],
+    [
+        "Nowadays people know the price of everything and the value of nothing.",
+        {"author": "Oscar Wilde", "book": "The Picture Of Dorian Gray"},
+    ],
+]
 
 nlp = English()
 
@@ -765,7 +788,6 @@ for doc, context in nlp.pipe(DATA, as_tuples=True):
     # Print the text and custom attribute data
     print(f"{doc.text}\n — '{doc._.book}' by {doc._.author}\n")
 ```
-<!-- #endregion -->
 
 ## Selective processing
 
@@ -806,20 +828,4 @@ with nlp.disable_pipes("tagger", "parser"):
     doc = nlp(text)
     # Print the entities in the doc
     print(doc.ents)
-```
-
-```python
-
-```
-
-```python
-
-```
-
-```python
-
-```
-
-```python
-
 ```
