@@ -607,6 +607,8 @@ for doc, context in nlp.pipe(data, as_tuples=True):
 <!-- #region -->
 ### Using only the tokenizer
 
+![spaCy pipeline](images/pipeline.png)
+
 Don't run the whole pipeline
 if you don't have to.
 Use `nlp.make_doc`
