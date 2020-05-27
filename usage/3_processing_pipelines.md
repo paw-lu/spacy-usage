@@ -252,6 +252,572 @@ doc = nlp("I have a cat and a Golden Retriever")
 print([(ent.text, ent.label_) for ent in doc.ents])
 ```
 
+## Extension attributes
+
+<!-- #region -->
+### Setting custom attributes
+
+Add custom metadata
+to documents, tokens, and spans
+through `._` property.
+
+```python
+doc._.title = "My document"
+token._.is_color = True
+span._.has_color = False
+```
+
+Registered on the global `Doc`, `Token`, or `Span` using `set_extension`
+
+```python
+# Import global classes
+from spacy.tokens import Doc, Token, Span
+
+# Set extensions on the Doc, Token and Span
+Doc.set_extension("title", default=None)
+Token.set_extension("is_color", default=False)
+Span.set_extension("has_color", default=False)
+```
+
+### Extension attribute types
+
+1. Attribute
+2. Property
+3. Method
+
+### Attribute extension
+
+Default value that can be overwritten
+
+```python
+from spacy.tokens import Token
+
+# Set extension on the Token with default value
+Token.set_extension("is_color", default=False)
+
+doc = nlp("The sky is blue.")
+
+# Overwrite extension attribute value
+doc[3]._.is_color = True
+```
+
+### Property extension
+
+Define a getter optional setter function.
+Getter only called when attribute value is retrieved.
+<!-- #endregion -->
+
+```python
+from spacy.lang.en import English
+from spacy.tokens import Token
+
+nlp = English()
+
+# Define getter function
+def get_is_color(token):
+    colors = ["red", "yellow", "blue"]
+    return token.text in colors
+
+
+# Set extension on the Token with getter
+Token.set_extension("is_color", getter=get_is_color)
+
+doc = nlp("The sky is blue.")
+print(doc[3]._.is_color, "-", doc[3].text)
+```
+
+`Span` extensions should almost always use a getter
+
+```python
+from spacy.tokens import Span
+
+# Define a getter function
+def get_has_color(span):
+    colors = ["red", "yellow", "blue"]
+    return any(token.text in colors for token in span)
+
+
+# Set extensions on the Span with getter
+Span.set_extension("has_color", getter=get_has_color)
+
+doc = nlp("The sky is blue.")
+print(doc[1:4]._.has_color, "-", doc[1:4].text)
+print(doc[0:2]._.has_color, "-", doc[0:2].text)
+```
+
+### Method extensions
+
+Assign a function
+that becomes available
+as an object method.
+Lets you pass arguments
+to the extension function.
+
+```python
+from spacy.tokens import Doc
+
+# Define method with arguments
+def has_token(doc, token_text):
+    in_doc = token_text in [token.text for token in doc]
+    return in_doc
+
+
+# Set extension on the Doc with method
+Doc.set_extension("has_token", method=has_token)
+
+doc = nlp("The sky is blue.")
+print(doc._.has_token("blue"), "- blue")
+print(doc._.has_token("cloud"), "- cloud")
+```
+
+## Setting extension attributes
+
+- **`Token.set_extension`**
+  register extension.
+  Use `default` argument to set default.
+  Use `getter` to pass in function.
+
+```python
+from spacy.lang.en import English
+from spacy.tokens import Token
+
+nlp = English()
+
+# Register the Token extension attribute "is_country" with the default value ``False``
+Token.set_extension("is_country", default=False)
+
+# Process the text and set the is_country attribute to True for the token "Spain"
+doc = nlp("I live in Spain.")
+doc[-2]._.is_country = True
+
+# Print the token text and the ``is_country`` attribute for all tokens
+print([(token.text, token._.is_country) for token in doc])
+```
+
+```python
+from spacy.lang.en import English
+from spacy.tokens import Token
+
+nlp = English()
+
+# Define the getter function that takes a token and returns its reversed text
+def get_reversed(token):
+    return token.text[::-1]
+
+# Register the Token property extension "reversed" with the getter ``get_reversed``
+Token.set_extension("reversed", getter=get_reversed)
+
+# Process the text and print the reversed attribute for each token
+doc = nlp("All generalizations are false, including this one.")
+for token in doc:
+    print("reversed:", token._.reversed)
+```
+
+- **`Docs.set_extension`**
+  define extension on `Docs`
+
+```python
+from spacy.lang.en import English
+from spacy.tokens import Doc
+
+nlp = English()
+
+# Define the getter function
+def get_has_number(doc):
+    # Return if any of the tokens in the doc return True for ``token.like_num``.
+    return any(token.like_num for token in doc)
+
+
+# Register the Doc property extension ``has_nubmer`` with the getter ``get_has_number``
+Doc.set_extension("has_number", getter=get_has_number)
+
+# Process the text and check the custom ``has_number`` attribute
+doc = nlp("The museum closed for five years in 2012.")
+print("has_number:", doc._.has_number)
+```
+
+- **`Span.set_extension`**
+  define extensions on `Span`
+  `method` argument may be used
+  to pass parameter with function
+
+```python
+from spacy.lang.en import English
+from spacy.tokens import Span
+
+nlp = English()
+
+# Define the method
+def to_html(span, tag):
+    # Wrap the span text in an HTML tag and return it
+    return f"<{tag}>{span.text}</{tag}>"
+
+# Register the ``Span`` method extension ``to_html`` with the method ``to_html``
+Span.set_extension("to_html", method=to_html)
+
+# Process the text and call the ``to_html`` method on the span with the tag "strong"
+doc = nlp("Hello world, this is a sentence.")
+span = doc[0:2]
+print(span._.to_html("strong"))
+```
+
+## Entities and extensions
+
+Return a Wikipedia search URL
+if the span is a person, organization, or location.
+
+```python
+import spacy
+from spacy.tokens import Span
+
+nlp = spacy.load("en_core_web_sm")
+
+
+def get_wikipedia_url(span):
+    # Get a Wikipedia URL if the span has one of the labels
+    if span.label_ in ("PERSON", "ORG", "GPE", "LOCATION"):
+        entity_text = span.text.replace(" ", "_")
+        return "https://en.wikipedia.org/w/index.php?search=" + entity_text
+
+
+# Set the Span extension wikipedia_url using getter ``get_wikipedia_url``
+Span.set_extension("wikipedia_url", getter=get_wikipedia_url)
+
+doc = nlp(
+    "In over fifty years from his very first recordings right through to his "
+    "last album, David Bowie was at the vanguard of contemporary culture."
+)
+for ent in doc.ents:
+    # Print the text and Wikipedia URL of the entity
+    print(ent.text, ent._.wikipedia_url)
+```
+
+<!-- #region -->
+## Components with extensions
+
+Extension attributes become powerful
+when coupled with custom pipeline components.
+
+This is a pipeline component that finds country names
+and a custom attribute that returns a country's capital,
+if available.
+
+Assume there exists a file `exercises/en/countries.json`
+that lists all countries.
+
+```python
+import json
+
+from spacy.lang.en import English
+from spacy.tokens import Span
+from spacy.matcher import PhraseMatcher
+
+with open("exercises/en/countries.json") as f:
+    COUNTRIES = json.loads(f.read())
+
+with open("exercises/en/capitals.json") as f:
+    CAPITALS = json.loads(f.read())
+    
+nlp = English()
+matcher = PhraseMatcher(nlp.vocab)
+matcher.add("COUNTRY", None, *list(nlp.pipe(COUNTRIES)))
+
+
+def countries_component(doc):
+    # Create an entity Span with the label "GPE" for all matches
+    matches = matcher(doc)
+    doc.ents = [Span(doc, start, end, label="GPE") for match_id, start, end in matches]
+    return doc
+
+
+# Add the component to the pipeline
+nlp.add_pipe(countries_component)
+print(nlp.pipe_names)
+
+# Getter that looks up the span text in the dictionary of country capitals
+get_capital = lambda span: CAPITALS.get(span.text)
+
+# Register the Span extension attribute "capital" with the getter ``get_capital``
+Span.set_extension("capital", getter=get_capital)
+
+# Process the text and print with entity text, label, and capital attributes
+doc = nlp("Czech Republic may help Slovakia protect its airspace")
+print([(ent.text, ent.label_, ent._.capital) for ent in doc.ents])
+```
+
+```text
+['countries_component']
+[('Czech Republic', 'GPE', 'Prague'), ('Slovakia', 'GPE', 'Bratislava')]
+```
+<!-- #endregion -->
+
+<!-- #region -->
+## Scaling performance
+
+### Processing large volumes of text
+
+Use `nlp.pipe`.
+Process text as streams yielding `Doc`.
+Faster than calling `nlp` on each.
+
+```python
+# Bad
+docs = [nlp(text) for text in LOTS_OF_TEXTS]
+
+# Good
+docs = list(nlp.pipe(LOTS_OF_TEXTS))
+```
+
+### Passing in context
+
+Use `as_tuples=True` on `nlp.pipe` to pass in `(text, context)` tuples.
+This yields `(doc, context)` tuples.
+<!-- #endregion -->
+
+```python
+from spacy.lang.en import English
+
+nlp = English()
+
+data = [
+    ("This is a text", {"id": 1, "page_number": 15}),
+    ("And another text", {"id": 2, "page_number": 16}),
+]
+
+for doc, context in nlp.pipe(data, as_tuples=True):
+    print(doc.text, context["page_number"])
+```
+
+```python
+from spacy.tokens import Doc
+
+Doc.set_extension("id", default=None)
+Doc.set_extension("page_number", default=None)
+
+data = [
+    ("This is a text", {"id": 1, "page_number": 15}),
+    ("And another text", {"id": 2, "page_number": 16}),
+]
+
+for doc, context in nlp.pipe(data, as_tuples=True):
+    doc._.id = context["id"]
+    doc._.page_number = context["page_number"]
+```
+
+<!-- #region -->
+### Using only the tokenizer
+
+Don't run the whole pipeline
+if you don't have to.
+Use `nlp.make_doc`
+to turn a text into a `Doc` object.
+
+```python
+# Bad
+doc = nlp("Hello world")
+
+# Good
+doc = nlp.make_doc("Hello world!)
+```
+
+### Disabling pipeline components
+
+`nlp.disable_pipes`
+to temporarily disable on or more pipes.
+
+```python
+# Disable tagger and parser
+with nlp.disable_pipes("tagger", "parser"):
+    # Process the text and print entities
+    doc = nlp(text)
+    print(doc.ents)
+```
+
+`with` block restores them.
+This only runs the remaining components.
+<!-- #endregion -->
+
+<!-- #region -->
+## Processing streams
+
+Iterate over the doc objects yielded by `nlp.pipe`
+instead of of iterating over texts and processing them.
+
+```python
+import json
+
+import spacy
+from spacy.lang.en import English
+
+nlp = English()
+
+with open("exercises/en/tweets.json") as f:
+    TEXTS = json.loads(f.read())
+
+# Process the texts and print the adjectives
+# Bad
+# for text in TEXTS:
+#     doc = nlp(text)
+#     print([token.text for token in doc if token.pos_ == "ADJ"])
+
+# Good
+print(*[[token.text for token in doc if token.pos_ == "ADJ"] for doc in nlp.pipe(TEXTS)])
+```
+
+```text
+['favorite']
+['sick']
+[]
+['happy']
+['delicious', 'fast']
+[]
+['terrible']
+```
+
+```python
+import json
+
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+
+with open("exercises/en/tweets.json") as f:
+    TEXTS = json.loads(f.read())
+
+# Process the texts and print the entities
+# Bad
+# docs = [nlp(text) for text in TEXTS]
+# entities = [doc.ents for doc in docs]
+# print(*entities)
+
+# Good
+print(*(doc.ents for doc in nlp.pipe(TEXTS)))
+```
+
+```text
+(McDonalds,) () (McDonalds,) (McDonalds, Spain) (The Arch Deluxe,) () (This morning, gettin mcdonalds)
+```
+<!-- #endregion -->
+
+```python
+from spacy.lang.en import English
+
+nlp = English()
+
+people = ["David Bowie", "Angela Merkel", "Lady Gaga"]
+
+# Create a list of patterns for the PhraseMatcher
+# Bad
+patterns = [nlp(person) for person in people]
+
+# Good
+# patterns = [person for person in nlp.pipe(people)]
+```
+
+```python
+patterns[0].text
+```
+
+```python
+from spacy.lang.en import English
+
+nlp = English()
+
+people = ["David Bowie", "Angela Merkel", "Lady Gaga"]
+
+# Create a list of patterns for the PhraseMatcher
+# Bad
+# patterns = [nlp(person) for person in people]
+
+# Good
+patterns = list(nlp.pipe(people))
+```
+
+<!-- #region -->
+## Processing data with context
+
+Use custom attributes
+to add author and book meta information quotes.
+
+```python
+import json
+from spacy.lang.en import English
+from spacy.tokens import Doc
+
+with open("exercises/en/bookquotes.json") as f:
+    DATA = json.loads(f.read())
+
+nlp = English()
+
+# Register the Doc extension "author" (default None)
+Doc.set_extension("author", default=None)
+
+# Register the Doc extension "book" (default None)
+Doc.set_extension("book", default=None)
+
+for doc, context in nlp.pipe(DATA, as_tuples=True):
+    # Set the doc._.book and doc._.author attributes from the context
+    doc._.book = context["book"]
+    doc._.author = context["author"]
+
+    # Print the text and custom attribute data
+    print(f"{doc.text}\n — '{doc._.book}' by {doc._.author}\n")
+```
+<!-- #endregion -->
+
+## Selective processing
+
+- **`nlp.make_doc`**
+  to only run tokenize step
+- **`nlp.disable_pipes`**
+  to skip preprocessing steps
+
+```python
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+text = (
+    "Chick-fil-A is an American fast food restaurant chain headquartered in "
+    "the city of College Park, Georgia, specializing in chicken sandwiches."
+)
+
+# Only tokenize the text
+# doc = nlp(text)
+doc = nlp.make_doc(text)
+print([token.text for token in doc])
+```
+
+Disable the tagger and parser
+
+```python
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+text = (
+    "Chick-fil-A is an American fast food restaurant chain headquartered in "
+    "the city of College Park, Georgia, specializing in chicken sandwiches."
+)
+
+# Disable the tagger and parser
+with nlp.disable_pipes("tagger", "parser"):
+    # Process the text
+    doc = nlp(text)
+    # Print the entities in the doc
+    print(doc.ents)
+```
+
+```python
+
+```
+
+```python
+
+```
+
+```python
+
+```
+
 ```python
 
 ```
